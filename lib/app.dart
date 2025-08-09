@@ -41,7 +41,7 @@ class TopicProvider extends ChangeNotifier {
         id: topic.key is int ? topic.key as int : DateTime.now().millisecondsSinceEpoch % 1000000,
         title: 'Revision due',
         body: '"$name" is due today',
-        scheduledDate: DateTime(nextDue.year, nextDue.month, nextDue.day, 9, 0),
+        scheduledDate: DateTime(nextDue.year, nextDue.month, nextDue.day, 19, 0),
       );
     }
 
@@ -66,7 +66,7 @@ class TopicProvider extends ChangeNotifier {
         id: topic.key is int ? topic.key as int : DateTime.now().millisecondsSinceEpoch % 1000000,
         title: 'Next revision due',
         body: '"${topic.name}" next due',
-        scheduledDate: DateTime(topic.nextDueDate!.year, topic.nextDueDate!.month, topic.nextDueDate!.day, 9, 0),
+        scheduledDate: DateTime(topic.nextDueDate!.year, topic.nextDueDate!.month, topic.nextDueDate!.day, 19, 0),
       );
     }
 
