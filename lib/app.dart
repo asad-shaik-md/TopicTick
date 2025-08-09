@@ -121,26 +121,48 @@ class _HomePageState extends State<HomePage> {
     final provider = context.watch<TopicProvider>();
     final topics = provider.topics;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('TopicTick')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Row(
-              children: [
-                Text('Today: ${DateTime.now().toLocal().toString().split(' ').first}'),
-                const Spacer(),
-                ElevatedButton.icon(
-                  onPressed: () => _showAddDialog(context),
-                  icon: const Icon(Icons.add),
-                  label: const Text('Add Topic'),
-                ),
-              ],
-            ),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('TopicTick'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Due Today'),
+              Tab(text: 'All Topics'),
+            ],
           ),
-          Expanded(
-            child: topics.isEmpty
+          actions: [
+            TextButton.icon(
+              onPressed: () => _showAddDialog(context),
+              icon: const Icon(Icons.add),
+              label: const Text('Add Topic'),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: TabBarView(
+          children: [
+            // Due Today tab
+            provider.dueToday.isEmpty
+                ? const Center(child: Text('No topics due today.'))
+                : ListView.builder(
+                    itemCount: provider.dueToday.length,
+                    itemBuilder: (context, index) {
+                      final t = provider.dueToday[index];
+                      return ListTile(
+                        title: Text(t.name),
+                        subtitle: Text('Due: ${_fmtDate(t.nextDueDate!)}'),
+                        trailing: TextButton(
+                          onPressed: () => provider.markDone(t),
+                          child: const Text('Done'),
+                        ),
+                      );
+                    },
+                  ),
+
+            // All Topics tab
+            topics.isEmpty
                 ? const Center(child: Text('No topics yet. Add one to get started.'))
                 : SingleChildScrollView(
                     child: DataTable(
@@ -163,61 +185,19 @@ class _HomePageState extends State<HomePage> {
                           DataCell(Text(studied)),
                           DataCell(Text(next)),
                           DataCell(Text(status)),
-                          DataCell(Row(
-                            children: [
-                              if (isDue)
-                                TextButton(
-                                  onPressed: () => provider.markDone(t),
-                                  child: const Text('Mark Done'),
-                                ),
-                              const SizedBox(width: 8),
-                              TextButton.icon(
-                                onPressed: () => _confirmDelete(context, t),
-                                icon: const Icon(Icons.delete_outline),
-                                label: const Text('Delete'),
-                              ),
-                            ],
-                          )),
+                          DataCell(
+                            TextButton.icon(
+                              onPressed: () => _confirmDelete(context, t),
+                              icon: const Icon(Icons.delete_outline),
+                              label: const Text('Delete'),
+                            ),
+                          ),
                         ]);
                       }).toList(),
                     ),
                   ),
-          ),
-          const Divider(height: 1),
-          Padding(
-            padding: const EdgeInsets.all(12.0),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text('Due Today (${provider.dueToday.length})', style: Theme.of(context).textTheme.titleMedium),
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: provider.dueToday.length,
-              itemBuilder: (context, index) {
-                final t = provider.dueToday[index];
-                return ListTile(
-                  title: Text(t.name),
-                  subtitle: Text('Due: ${_fmtDate(t.nextDueDate!)}'),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      TextButton(
-                        onPressed: () => provider.markDone(t),
-                        child: const Text('Done'),
-                      ),
-                      IconButton(
-                        tooltip: 'Delete',
-                        onPressed: () => _confirmDelete(context, t),
-                        icon: const Icon(Icons.delete_outline),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
