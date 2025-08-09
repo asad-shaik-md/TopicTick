@@ -70,6 +70,16 @@ class TopicProvider extends ChangeNotifier {
 
     notifyListeners();
   }
+
+  Future<void> deleteTopic(Topic topic) async {
+    final id = topic.key is int ? topic.key as int : null;
+    if (id != null) {
+      await notifications.cancel(id);
+    }
+    await repo.delete(topic);
+    _topics = await repo.getAll();
+    notifyListeners();
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -158,6 +168,12 @@ class _HomePageState extends State<HomePage> {
                                   onPressed: () => provider.markDone(t),
                                   child: const Text('Mark Done'),
                                 ),
+                              const SizedBox(width: 8),
+                              TextButton.icon(
+                                onPressed: () => _confirmDelete(context, t),
+                                icon: const Icon(Icons.delete_outline),
+                                label: const Text('Delete'),
+                              ),
                             ],
                           )),
                         ]);
@@ -181,9 +197,19 @@ class _HomePageState extends State<HomePage> {
                 return ListTile(
                   title: Text(t.name),
                   subtitle: Text('Due: ${_fmtDate(t.nextDueDate!)}'),
-                  trailing: TextButton(
-                    onPressed: () => provider.markDone(t),
-                    child: const Text('Done'),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      TextButton(
+                        onPressed: () => provider.markDone(t),
+                        child: const Text('Done'),
+                      ),
+                      IconButton(
+                        tooltip: 'Delete',
+                        onPressed: () => _confirmDelete(context, t),
+                        icon: const Icon(Icons.delete_outline),
+                      ),
+                    ],
                   ),
                 );
               },
@@ -254,5 +280,22 @@ class _HomePageState extends State<HomePage> {
         );
       },
     );
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Topic t) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Topic'),
+        content: Text('Delete "${t.name}"? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          FilledButton.tonal(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (ok == true && mounted) {
+      await context.read<TopicProvider>().deleteTopic(t);
+    }
   }
 }
