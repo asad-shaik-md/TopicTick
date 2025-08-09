@@ -49,13 +49,15 @@ class TopicProvider extends ChangeNotifier {
   }
 
   Future<void> markDone(Topic topic) async {
-    // Advance to next stage
+    // Completion date is when the user clicks Mark Done
+    final completionDate = DateTime.now();
+
     final nextStage = schedule.nextStageIndex(topic.stageIndex);
-    final nextDue = schedule.nextDueDate(topic.studyDate, nextStage);
+    final nextDue = schedule.nextDueDate(topic.studyDate, nextStage, completionDate: completionDate);
 
     topic.stageIndex = nextStage;
     topic.nextDueDate = nextDue;
-    topic.isDone = nextDue == null; // only done when all stages completed
+    topic.isDone = nextDue == null;
 
     await repo.update(topic);
 
