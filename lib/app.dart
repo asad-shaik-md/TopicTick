@@ -41,7 +41,7 @@ class TopicProvider extends ChangeNotifier {
         id: topic.key is int ? topic.key as int : DateTime.now().millisecondsSinceEpoch % 1000000,
         title: 'Revision due',
         body: '"$name" is due today',
-        scheduledDate: DateTime(nextDue.year, nextDue.month, nextDue.day, 19, 0),
+        scheduledDate: DateTime(nextDue.year, nextDue.month, nextDue.day, 9, 0),
       );
     }
 
@@ -66,7 +66,7 @@ class TopicProvider extends ChangeNotifier {
         id: topic.key is int ? topic.key as int : DateTime.now().millisecondsSinceEpoch % 1000000,
         title: 'Next revision due',
         body: '"${topic.name}" next due',
-        scheduledDate: DateTime(topic.nextDueDate!.year, topic.nextDueDate!.month, topic.nextDueDate!.day, 19, 0),
+        scheduledDate: DateTime(topic.nextDueDate!.year, topic.nextDueDate!.month, topic.nextDueDate!.day, 9, 0),
       );
     }
 
@@ -86,16 +86,22 @@ class TopicProvider extends ChangeNotifier {
 
 class MyApp extends StatelessWidget {
   final NotificationService notifications;
-  const MyApp({super.key, required this.notifications});
+  final ScheduleService schedule;
+  const MyApp({super.key, required this.notifications, required this.schedule});
 
   @override
   Widget build(BuildContext context) {
     final repo = TopicRepository();
-    final schedule = ScheduleService();
 
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => TopicProvider(repo: repo, schedule: schedule, notifications: notifications)..load()),
+        ChangeNotifierProvider(
+          create: (_) => TopicProvider(
+            repo: repo,
+            schedule: schedule,
+            notifications: notifications,
+          )..load(),
+        ),
       ],
       child: MaterialApp(
         title: 'TopicTick',
@@ -133,6 +139,11 @@ class _HomePageState extends State<HomePage> {
             ],
           ),
           actions: [
+            IconButton(
+              tooltip: 'Settings',
+              onPressed: () => _openSettings(context),
+              icon: const Icon(Icons.settings),
+            ),
             TextButton.icon(
               onPressed: () => _showAddDialog(context),
               icon: const Icon(Icons.add),
@@ -279,5 +290,55 @@ class _HomePageState extends State<HomePage> {
     if (ok == true && mounted) {
       await context.read<TopicProvider>().deleteTopic(t);
     }
+  }
+
+  Future<void> _openSettings(BuildContext context) async {
+    final schedule = context.read<TopicProvider>().schedule;
+    // Ensure intervals are loaded
+    await schedule.load();
+
+    final controller = TextEditingController(text: schedule.intervals.join(', '));
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Revision Schedule'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Enter days for each revision, separated by commas.'),
+              const SizedBox(height: 8),
+              TextField(
+                controller: controller,
+                decoration: const InputDecoration(
+                  labelText: 'Intervals (days)',
+                  hintText: 'e.g. 3, 7, 14, 30',
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Rule:'),
+              const Text('- 1st interval counts from Study Date.'),
+              const Text('- Each subsequent interval counts from the day you click Mark Done.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          FilledButton(
+            onPressed: () async {
+              final parts = controller.text.split(',').map((s) => s.trim()).where((s) => s.isNotEmpty);
+              final days = parts.map((s) => int.tryParse(s) ?? -1).where((n) => n > 0).toList();
+              await schedule.saveIntervals(days);
+              if (context.mounted) Navigator.pop(context);
+              setState(() {}); // refresh UI to reflect updated schedule in future computations
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
   }
 }
